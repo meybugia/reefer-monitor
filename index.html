@@ -1,238 +1,530 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reefer Fleet Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0d1117; color: #c9d1d9; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; height: 100vh; display: flex; flex-direction: column; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0; }
-    .header h1 { font-size: 16px; color: #58a6ff; font-weight: 600; }
-    .header-meta { display: flex; gap: 16px; align-items: center; color: #8b949e; font-size: 12px; }
-    .countdown-badge { background: #21262d; border: 1px solid #30363d; padding: 3px 10px; border-radius: 12px; }
-    .table-wrapper { flex: 1; overflow: auto; padding: 12px 16px; }
-    table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-    thead { position: sticky; top: 0; z-index: 10; }
-    th { background: #161b22; color: #8b949e; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 9px 10px; text-align: left; border-bottom: 2px solid #30363d; white-space: nowrap; }
-    td { padding: 8px 10px; border-bottom: 1px solid #21262d; vertical-align: middle; white-space: nowrap; }
-    tr:hover td { background: #161b22; }
-    .reg-num { font-weight: 700; color: #e6edf3; }
-    .address { color: #8b949e; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-    .ign-on { color: #3fb950; font-weight: 700; }
-    .ign-off { color: #484f58; }
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .badge-moving  { background: #1a4d1a; color: #3fb950; border: 1px solid #2ea043; }
-    .badge-idling  { background: #4d3800; color: #e3b341; border: 1px solid #9e6a03; }
-    .badge-stopped { background: #4d1a1a; color: #f78166; border: 1px solid #da3633; }
-    .badge-parking { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
-    .duration { color: #8b949e; font-size: 12px; }
-    .temp-cell { display: flex; align-items: center; gap: 5px; }
-    .temp-bound { color: #484f58; font-size: 11px; min-width: 34px; }
-    .temp-current { font-weight: 700; font-size: 13px; padding: 2px 7px; border-radius: 4px; min-width: 54px; text-align: center; }
-    .temp-ok    { color: #3fb950; background: #1a3a1f; }
-    .temp-alert { color: #ffffff; background: #da3633; }
-    .temp-only  { color: #c9d1d9; }
-    .door-open   { color: #f78166; font-weight: 700; }
-    .door-closed { color: #3fb950; }
-    .state-msg { padding: 40px; text-align: center; color: #8b949e; font-size: 14px; }
-    .state-error { color: #f78166; }
+    /* ── THEME TOKENS ─────────────────────────────────────── */
+    :root {
+      --radius: 12px;
+      --radius-sm: 8px;
+      --transition: 0.2s ease;
+      --font: 'Inter', system-ui, sans-serif;
+      --green:    #22c55e;
+      --green-bg: rgba(34,197,94,0.12);
+      --amber:    #f59e0b;
+      --amber-bg: rgba(245,158,11,0.12);
+      --red:      #ef4444;
+      --red-bg:   rgba(239,68,68,0.12);
+      --blue:     #3b82f6;
+      --blue-bg:  rgba(59,130,246,0.12);
+      --muted:    #6b7280;
+    }
+
+    [data-theme="dark"] {
+      --bg:        #0a0f1e;
+      --surface:   #111827;
+      --surface-2: #1f2937;
+      --border:    #1f2937;
+      --border-2:  #374151;
+      --text:      #f1f5f9;
+      --text-2:    #94a3b8;
+      --text-3:    #475569;
+      --header-bg: #0d1424;
+      --card-bg:   #111827;
+      --row-hover: #1a2235;
+      --shadow:    0 4px 24px rgba(0,0,0,0.4);
+      --toggle-bg: #1f2937;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f8fafc;
+      --surface:   #ffffff;
+      --surface-2: #f1f5f9;
+      --border:    #e2e8f0;
+      --border-2:  #cbd5e1;
+      --text:      #0f172a;
+      --text-2:    #475569;
+      --text-3:    #94a3b8;
+      --header-bg: #ffffff;
+      --card-bg:   #ffffff;
+      --row-hover: #f8fafc;
+      --shadow:    0 4px 24px rgba(0,0,0,0.08);
+      --toggle-bg: #f1f5f9;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ── HEADER ───────────────────────────────────────────── */
+    .header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue), #6366f1);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    .header-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .header-sub   { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    .refresh-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; color: var(--text-2); font-weight: 500;
+    }
+
+    .refresh-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.5; transform:scale(0.8); }
+    }
+
+    .last-updated { font-size: 12px; color: var(--text-3); }
+
+    .theme-toggle {
+      background: var(--toggle-bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px; cursor: pointer;
+      font-size: 12px; font-weight: 500; font-family: var(--font);
+      color: var(--text-2); display: flex; align-items: center; gap: 5px;
+      transition: all var(--transition);
+    }
+    .theme-toggle:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── SUMMARY CARDS ────────────────────────────────────── */
+    .summary-bar {
+      padding: 16px 24px; display: flex; gap: 12px;
+      flex-shrink: 0; background: var(--bg);
+    }
+
+    .stat-card {
+      flex: 1; background: var(--card-bg);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      min-width: 0;
+    }
+    .stat-card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+    .stat-card.alarm  { border-left: 3px solid var(--red);   }
+    .stat-card.moving { border-left: 3px solid var(--green); }
+    .stat-card.idling { border-left: 3px solid var(--amber); }
+    .stat-card.total  { border-left: 3px solid var(--blue);  }
+    .stat-card.parked { border-left: 3px solid var(--muted); }
+
+    .stat-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .stat-icon.blue  { background: var(--blue-bg);  }
+    .stat-icon.green { background: var(--green-bg); }
+    .stat-icon.amber { background: var(--amber-bg); }
+    .stat-icon.red   { background: var(--red-bg);   }
+    .stat-icon.gray  { background: rgba(107,114,128,0.12); }
+
+    .stat-value {
+      font-size: 24px; font-weight: 700; line-height: 1;
+      color: var(--text); letter-spacing: -0.5px;
+    }
+    .stat-label {
+      font-size: 11px; color: var(--text-2); font-weight: 500;
+      margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── TABLE ────────────────────────────────────────────── */
+    .table-wrap { flex: 1; overflow: auto; padding: 0 24px 24px; }
+    .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+    table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      min-width: 960px; background: var(--card-bg);
+      border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    }
+
+    thead th {
+      background: var(--surface-2); padding: 11px 14px; text-align: left;
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+      position: sticky; top: 0; z-index: 5;
+    }
+
+    tbody tr { transition: background var(--transition); }
+    tbody tr:hover td { background: var(--row-hover); }
+    tbody td {
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      font-size: 13px; color: var(--text); vertical-align: middle; white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .reg-num { font-weight: 700; font-size: 13px; letter-spacing: 0.3px; }
+    .address-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 12px; }
+
+    .ign-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+    }
+    .ign-badge.on  { background: var(--green-bg); color: var(--green); }
+    .ign-badge.off { background: rgba(107,114,128,0.1); color: var(--muted); }
+    .ign-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    .speed-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .status-badge.moving  { background: var(--green-bg); color: var(--green); }
+    .status-badge.idling  { background: var(--amber-bg); color: var(--amber); }
+    .status-badge.stopped { background: var(--red-bg);   color: var(--red);   }
+    .status-badge.parking { background: rgba(107,114,128,0.1); color: var(--muted); }
+
+    .dur { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+    .temp-wrap { display: flex; align-items: center; gap: 4px; }
+    .temp-bound { font-size: 10px; color: var(--text-3); font-weight: 500; min-width: 28px; }
+    .temp-value {
+      font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+      min-width: 58px; text-align: center; font-variant-numeric: tabular-nums;
+    }
+    .temp-ok    { color: var(--green); background: var(--green-bg); }
+    .temp-alert { color: #fff; background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    .temp-plain { color: var(--text); background: var(--surface-2); }
+    .temp-na    { color: var(--text-3); font-size: 12px; }
+
+    .door-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+    }
+    .door-badge.open   { background: var(--red-bg);   color: var(--red);   }
+    .door-badge.closed { background: var(--green-bg); color: var(--green); }
+    .door-na { color: var(--text-3); font-size: 12px; }
+
+    /* ── STATES ───────────────────────────────────────────── */
+    .state-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px; }
+    .state-card { text-align: center; max-width: 320px; }
+    .state-icon { font-size: 40px; margin-bottom: 16px; }
+    .state-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .state-sub { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+    .state-sub.error { color: var(--red); }
+
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+
 <div class="header">
-  <h1>Reefer Fleet Monitor</h1>
-  <div class="header-meta">
-    <span><span id="vehicleCount">-</span> vehicles</span>
-    <span class="countdown-badge">Refresh in <strong id="countdown">30</strong>s</span>
-    <span id="lastUpdated">-</span>
+  <div class="header-left">
+    <div class="logo-icon">🚛</div>
+    <div>
+      <div class="header-title">Reefer Fleet Monitor</div>
+      <div class="header-sub">Live cold chain visibility</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">—</span>
+    <div class="refresh-pill">
+      <div class="refresh-dot"></div>
+      <span>Refresh in <strong id="countdown">30</strong>s</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☀ Light</button>
   </div>
 </div>
-<div class="table-wrapper" id="tableWrapper">
-  <div class="state-msg">Initialising fleet data...</div>
+
+<div class="summary-bar">
+  <div class="stat-card total">
+    <div class="stat-icon blue">🚛</div>
+    <div><div class="stat-value" id="s-total">—</div><div class="stat-label">Total Reefers</div></div>
+  </div>
+  <div class="stat-card moving">
+    <div class="stat-icon green">▶</div>
+    <div><div class="stat-value" id="s-moving">—</div><div class="stat-label">Moving</div></div>
+  </div>
+  <div class="stat-card idling">
+    <div class="stat-icon amber">⏸</div>
+    <div><div class="stat-value" id="s-idling">—</div><div class="stat-label">Idling</div></div>
+  </div>
+  <div class="stat-card parked">
+    <div class="stat-icon gray">🅿</div>
+    <div><div class="stat-value" id="s-stopped">—</div><div class="stat-label">Stopped / Parked</div></div>
+  </div>
+  <div class="stat-card alarm">
+    <div class="stat-icon red">⚠</div>
+    <div><div class="stat-value" id="s-alarms">—</div><div class="stat-label">Active Alarms</div></div>
+  </div>
 </div>
+
+<div class="table-wrap" id="tableWrap">
+  <div class="state-wrap">
+    <div class="state-card">
+      <div class="spinner"></div>
+      <div class="state-title">Connecting to fleet</div>
+      <div class="state-sub">Fetching live data from MyGeotab...</div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
-  var REFRESH_INTERVAL  = 30;
-  var SENSOR_LOOKBACK   = 5;
-  var PARKING_THRESHOLD = 3600;
-  var _api;
-  var _diagMap   = { temp1: null, temp2: null, temp3: null, door1: null, door2: null };
-  var _threshMap = {};
-  var _timer;
-  var _tick = REFRESH_INTERVAL;
+  var REFRESH = 30, LOOKBACK = 5, PARK_THR = 3600;
+  var _api, _diagMap = { temp1:null,temp2:null,temp3:null,door1:null,door2:null };
+  var _thresh = {}, _timer, _tick = REFRESH;
 
-  function apiCall(method, params) {
-    return new Promise(function (resolve, reject) { _api.call(method, params, resolve, reject); });
+  /* Theme */
+  var savedTheme = localStorage.getItem('reefer-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeBtn(savedTheme);
+
+  function toggleTheme() {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('reefer-theme', next);
+    updateThemeBtn(next);
   }
+  function updateThemeBtn(t) {
+    var b = document.getElementById('themeBtn');
+    if (b) b.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+  }
+  window.toggleTheme = toggleTheme;
 
+  /* API */
+  function call(m, p) { return new Promise(function(r,j){ _api.call(m,p,r,j); }); }
+
+  /* Diagnostics */
   async function discoverDiagnostics() {
-    var all = await apiCall("Get", { typeName: "Diagnostic", resultsLimit: 5000 });
-    all.forEach(function (d) {
+    var all = await call('Get', { typeName:'Diagnostic', resultsLimit:5000 });
+    all.forEach(function(d) {
       if (!d.name) return;
       var n = d.name.toLowerCase();
-      var isColdRelated = n.includes("cold") || n.includes("ioxcold") || n.includes("iox-cold");
-      var isTemp = n.includes("temp");
-      var isDoor = n.includes("door") || n.includes("cargo");
-      if (isColdRelated && isTemp) {
-        if      (n.includes("1") && !_diagMap.temp1) _diagMap.temp1 = d.id;
-        else if (n.includes("2") && !_diagMap.temp2) _diagMap.temp2 = d.id;
-        else if (n.includes("3") && !_diagMap.temp3) _diagMap.temp3 = d.id;
+      var cold = n.includes('cold') || n.includes('ioxcold') || n.includes('iox-cold');
+      if (cold && n.includes('temp')) {
+        if      (n.includes('1') && !_diagMap.temp1) _diagMap.temp1 = d.id;
+        else if (n.includes('2') && !_diagMap.temp2) _diagMap.temp2 = d.id;
+        else if (n.includes('3') && !_diagMap.temp3) _diagMap.temp3 = d.id;
       }
-      if (isColdRelated && isDoor) {
-        if      (n.includes("1") && !_diagMap.door1) _diagMap.door1 = d.id;
-        else if (n.includes("2") && !_diagMap.door2) _diagMap.door2 = d.id;
+      if (cold && (n.includes('door') || n.includes('cargo'))) {
+        if      (n.includes('1') && !_diagMap.door1) _diagMap.door1 = d.id;
+        else if (n.includes('2') && !_diagMap.door2) _diagMap.door2 = d.id;
       }
     });
   }
 
+  /* Thresholds */
   async function loadThresholds() {
-    var rules = await apiCall("Get", { typeName: "Rule", resultsLimit: 1000 });
-    var tempIds = new Set([_diagMap.temp1, _diagMap.temp2, _diagMap.temp3].filter(Boolean));
-    rules.forEach(function (rule) { if (rule.condition) traverseCondition(rule.condition, tempIds); });
+    var rules = await call('Get', { typeName:'Rule', resultsLimit:1000 });
+    var tIds = new Set([_diagMap.temp1,_diagMap.temp2,_diagMap.temp3].filter(Boolean));
+    rules.forEach(function(r){ if (r.condition) walk(r.condition, tIds); });
   }
-
-  function traverseCondition(cond, tempIds) {
-    if (!cond) return;
-    var diagId = cond.diagnostic && cond.diagnostic.id;
-    if (diagId && tempIds.has(diagId)) {
-      if (!_threshMap[diagId]) _threshMap[diagId] = { min: null, cap: null };
-      if (cond.minimum != null) _threshMap[diagId].min = cond.minimum;
-      if (cond.maximum != null) _threshMap[diagId].cap = cond.maximum;
-      if (cond.value != null) {
-        if (cond.conditionType === "IsValueLessThan" || cond.conditionType === "IsValueLessOrEqual") _threshMap[diagId].min = cond.value;
-        if (cond.conditionType === "IsValueMoreThan" || cond.conditionType === "IsValueMoreOrEqual") _threshMap[diagId].cap = cond.value;
+  function walk(c, tIds) {
+    if (!c) return;
+    var dId = c.diagnostic && c.diagnostic.id;
+    if (dId && tIds.has(dId)) {
+      if (!_thresh[dId]) _thresh[dId] = { min:null, cap:null };
+      if (c.minimum != null) _thresh[dId].min = c.minimum;
+      if (c.maximum != null) _thresh[dId].cap = c.maximum;
+      if (c.value != null) {
+        if (c.conditionType==='IsValueLessThan'    || c.conditionType==='IsValueLessOrEqual') _thresh[dId].min = c.value;
+        if (c.conditionType==='IsValueMoreThan'    || c.conditionType==='IsValueMoreOrEqual') _thresh[dId].cap = c.value;
       }
     }
-    if (Array.isArray(cond.conditions)) { cond.conditions.forEach(function (c) { traverseCondition(c, tempIds); }); }
+    if (Array.isArray(c.conditions)) c.conditions.forEach(function(ch){ walk(ch,tIds); });
   }
 
-  async function fetchFleetData() {
-    var fromDate = new Date(Date.now() - SENSOR_LOOKBACK * 60 * 1000).toISOString();
-    var base = await Promise.all([
-      apiCall("Get", { typeName: "Device",           resultsLimit: 1000 }),
-      apiCall("Get", { typeName: "DeviceStatusInfo", resultsLimit: 1000 }),
-      apiCall("Get", { typeName: "Zone",             resultsLimit: 2000 })
+  /* Fetch */
+  async function fetchData() {
+    var from = new Date(Date.now() - LOOKBACK*60000).toISOString();
+    var [devices, statuses, zones] = await Promise.all([
+      call('Get', { typeName:'Device',           resultsLimit:1000 }),
+      call('Get', { typeName:'DeviceStatusInfo', resultsLimit:1000 }),
+      call('Get', { typeName:'Zone',             resultsLimit:2000 })
     ]);
-    var deviceMap = byId(base[0]); var statuses = base[1]; var zoneMap = byId(base[2]);
-    var slots = ["temp1","temp2","temp3","door1","door2"];
-    var diagIds = slots.map(function (k) { return _diagMap[k]; });
-    var fetches = diagIds.map(function (id) {
-      if (!id) return Promise.resolve([]);
-      return apiCall("Get", { typeName: "StatusData", search: { diagnosticSearch: { id: id }, fromDate: fromDate }, resultsLimit: 2000 });
+    var dMap = idx(devices), zMap = idx(zones);
+    var dIds = ['temp1','temp2','temp3','door1','door2'].map(function(k){ return _diagMap[k]; });
+    var fetches = dIds.map(function(id){
+      return id ? call('Get',{typeName:'StatusData',search:{diagnosticSearch:{id:id},fromDate:from},resultsLimit:2000}) : Promise.resolve([]);
     });
-    fetches.push(apiCall("Get", { typeName: "StatusData", search: { diagnosticSearch: { id: "DiagnosticIgnitionId" }, fromDate: fromDate }, resultsLimit: 2000 }));
+    fetches.push(call('Get',{typeName:'StatusData',search:{diagnosticSearch:{id:'DiagnosticIgnitionId'},fromDate:from},resultsLimit:2000}));
     var results = await Promise.all(fetches);
     var ignData = results.pop();
-    var sensorMap = buildSensorMap(results, diagIds);
-    var ignMap = buildLatestMap(ignData);
-    var coordList = statuses.filter(function (s) { return s.latitude && s.longitude; });
-    var addresses = [];
-    if (coordList.length > 0) {
-      try { addresses = await apiCall("GetAddresses", { coordinates: coordList.map(function (s) { return { x: s.longitude, y: s.latitude }; }) }); } catch (e) {}
+    var sMap = buildSMap(results, dIds), ignMap = buildLMap(ignData);
+
+    var coords = statuses.filter(function(s){ return s.latitude && s.longitude; });
+    var addrs = [];
+    if (coords.length) {
+      try { addrs = await call('GetAddresses',{coordinates:coords.map(function(s){return{x:s.longitude,y:s.latitude};})}); } catch(e) {}
     }
     var addrMap = {};
-    coordList.forEach(function (s, i) { addrMap[s.device.id] = (addresses[i] && addresses[i].formattedAddress) || "-"; });
-    statuses.forEach(function (s) {
-      if (s.currentZones && s.currentZones.length) { var z = zoneMap[s.currentZones[0].id]; if (z) addrMap[s.device.id] = "[Zone] " + z.name; }
+    coords.forEach(function(s,i){ addrMap[s.device.id] = (addrs[i] && addrs[i].formattedAddress) || '—'; });
+    statuses.forEach(function(s){
+      if (s.currentZones && s.currentZones.length) { var z=zMap[s.currentZones[0].id]; if(z) addrMap[s.device.id]='📍 '+z.name; }
     });
-    return statuses.map(function (s) {
-      var device = deviceMap[s.device.id]; if (!device) return null;
-      var speed = s.speed || 0; var sensors = sensorMap[s.device.id] || {};
-      var ignEntry = ignMap[s.device.id]; var ignOn = ignEntry ? (ignEntry.data === 1) : (speed > 0);
-      var dur = s.currentStateDuration || 0;
-      var status;
-      if      (ignOn  && speed > 5)               status = "Moving";
-      else if (ignOn  && speed <= 5)              status = "Idling";
-      else if (!ignOn && dur < PARKING_THRESHOLD) status = "Stopped";
-      else                                         status = "Parking";
-      return { regNum: device.licensePlate || device.name || "-", address: addrMap[s.device.id] || "-",
-        ignOn: ignOn, speed: Math.round(speed), status: status, duration: dur,
-        temp1: readVal(sensors, _diagMap.temp1), temp2: readVal(sensors, _diagMap.temp2), temp3: readVal(sensors, _diagMap.temp3),
-        door1: readDoor(sensors, _diagMap.door1), door2: readDoor(sensors, _diagMap.door2) };
+
+    return statuses.map(function(s){
+      var dev = dMap[s.device.id]; if (!dev) return null;
+      var spd = s.speed||0, sens = sMap[s.device.id]||{};
+      var ign = ignMap[s.device.id], ignOn = ign ? ign.data===1 : spd>0;
+      var dur = s.currentStateDuration||0;
+      var status = ignOn&&spd>5?'Moving':ignOn?'Idling':dur<PARK_THR?'Stopped':'Parking';
+      var t1=rv(sens,_diagMap.temp1), t2=rv(sens,_diagMap.temp2), t3=rv(sens,_diagMap.temp3);
+      var d1=rd(sens,_diagMap.door1), d2=rd(sens,_diagMap.door2);
+      var alarm = chkAlarm(t1,_diagMap.temp1)||chkAlarm(t2,_diagMap.temp2)||chkAlarm(t3,_diagMap.temp3)||d1==='Open'||d2==='Open';
+      return {reg:dev.licensePlate||dev.name||'—',addr:addrMap[s.device.id]||'—',ignOn,spd:Math.round(spd),status,dur,t1,t2,t3,d1,d2,alarm};
     }).filter(Boolean);
   }
 
-  function buildSensorMap(arrays, ids) {
-    var map = {};
-    arrays.forEach(function (arr, i) {
-      var id = ids[i]; if (!id) return;
-      arr.forEach(function (sd) { var dId = sd.device.id; if (!map[dId]) map[dId] = {}; if (!map[dId][id] || sd.dateTime > map[dId][id].dateTime) map[dId][id] = sd; });
-    });
-    return map;
+  function chkAlarm(v,id) {
+    if (v==null) return false;
+    var t=_thresh[id]; if(!t) return false;
+    return (t.min!==null&&v<t.min)||(t.cap!==null&&v>t.cap);
   }
-  function buildLatestMap(arr) { var map = {}; arr.forEach(function (sd) { var id = sd.device.id; if (!map[id] || sd.dateTime > map[id].dateTime) map[id] = sd; }); return map; }
-  function readVal(sensors, id)  { return (id && sensors[id]) ? sensors[id].data : null; }
-  function readDoor(sensors, id) { if (!id || !sensors[id]) return null; return sensors[id].data === 1 ? "Open" : "Closed"; }
+  function buildSMap(arrays,ids) {
+    var m={};
+    arrays.forEach(function(arr,i){ var id=ids[i]; if(!id) return; arr.forEach(function(sd){ var d=sd.device.id; if(!m[d])m[d]={}; if(!m[d][id]||sd.dateTime>m[d][id].dateTime)m[d][id]=sd; }); });
+    return m;
+  }
+  function buildLMap(arr) { var m={}; arr.forEach(function(sd){ var id=sd.device.id; if(!m[id]||sd.dateTime>m[id].dateTime)m[id]=sd; }); return m; }
+  function rv(s,id) { return (id&&s[id]) ? s[id].data : null; }
+  function rd(s,id) { if(!id||!s[id]) return null; return s[id].data===1?'Open':'Closed'; }
+  function idx(arr) { return arr.reduce(function(m,o){ m[o.id]=o; return m; },{}); }
 
+  /* Render */
   function render(rows) {
-    var wrap = document.getElementById("tableWrapper");
-    if (!rows.length) { wrap.innerHTML = "<div class='state-msg state-error'>No vehicles found.</div>"; return; }
-    document.getElementById("vehicleCount").textContent = rows.length;
-    document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
-    wrap.innerHTML = "<table><thead><tr><th>Reg Num</th><th>Address / Zone</th><th>IGN</th><th>Speed</th><th>Status</th><th>Duration</th><th>Temp 1</th><th>Temp 2</th><th>Temp 3</th><th>Door 1</th><th>Door 2</th></tr></thead><tbody>" + rows.map(renderRow).join("") + "</tbody></table>";
+    var moving=0,idling=0,stopped=0,alarms=0;
+    rows.forEach(function(r){
+      if(r.status==='Moving') moving++;
+      else if(r.status==='Idling') idling++;
+      else stopped++;
+      if(r.alarm) alarms++;
+    });
+    document.getElementById('s-total').textContent   = rows.length;
+    document.getElementById('s-moving').textContent  = moving;
+    document.getElementById('s-idling').textContent  = idling;
+    document.getElementById('s-stopped').textContent = stopped;
+    document.getElementById('s-alarms').textContent  = alarms;
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    var wrap = document.getElementById('tableWrap');
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="state-wrap"><div class="state-card"><div class="state-icon">🔍</div><div class="state-title">No vehicles found</div><div class="state-sub">No active devices in this database.</div></div></div>';
+      return;
+    }
+
+    var h = '<table><thead><tr>' +
+      '<th>Reg Num</th><th>Address / Zone</th><th>IGN</th><th>Speed</th><th>Status</th><th>Duration</th>' +
+      '<th>Temp 1</th><th>Temp 2</th><th>Temp 3</th><th>Door 1</th><th>Door 2</th>' +
+      '</tr></thead><tbody>';
+
+    rows.forEach(function(r){
+      h += '<tr>';
+      h += '<td><span class="reg-num">'+esc(r.reg)+'</span></td>';
+      h += '<td><span class="address-cell" title="'+esc(r.addr)+'">'+esc(r.addr)+'</span></td>';
+      h += '<td><span class="ign-badge '+(r.ignOn?'on':'off')+'"><span class="ign-dot"></span>'+(r.ignOn?'ON':'OFF')+'</span></td>';
+      h += '<td><span class="speed-val">'+r.spd+' km/h</span></td>';
+      h += '<td><span class="status-badge '+r.status.toLowerCase()+'">'+r.status+'</span></td>';
+      h += '<td><span class="dur">'+fmtDur(r.dur)+'</span></td>';
+      h += '<td>'+renderTemp(r.t1,_diagMap.temp1)+'</td>';
+      h += '<td>'+renderTemp(r.t2,_diagMap.temp2)+'</td>';
+      h += '<td>'+renderTemp(r.t3,_diagMap.temp3)+'</td>';
+      h += '<td>'+renderDoor(r.d1)+'</td>';
+      h += '<td>'+renderDoor(r.d2)+'</td>';
+      h += '</tr>';
+    });
+    wrap.innerHTML = h + '</tbody></table>';
   }
 
-  function renderRow(r) {
-    return "<tr><td class='reg-num'>" + x(r.regNum) + "</td><td class='address' title='" + x(r.address) + "'>" + x(r.address) + "</td>" +
-      "<td class='" + (r.ignOn ? "ign-on" : "ign-off") + "'>" + (r.ignOn ? "ON" : "OFF") + "</td>" +
-      "<td>" + r.speed + " km/h</td><td>" + badge(r.status) + "</td><td class='duration'>" + fmt(r.duration) + "</td>" +
-      "<td>" + renderTemp(r.temp1, _diagMap.temp1) + "</td><td>" + renderTemp(r.temp2, _diagMap.temp2) + "</td><td>" + renderTemp(r.temp3, _diagMap.temp3) + "</td>" +
-      "<td>" + renderDoor(r.door1) + "</td><td>" + renderDoor(r.door2) + "</td></tr>";
-  }
-
-  function badge(s) {
-    var cls = { Moving:"badge-moving", Idling:"badge-idling", Stopped:"badge-stopped", Parking:"badge-parking" };
-    return "<span class='badge " + (cls[s] || "") + "'>" + s + "</span>";
-  }
-
-  function renderTemp(val, diagId) {
-    if (val === null || val === undefined) return "<span style='color:#484f58'>-</span>";
-    var t = _threshMap[diagId]; var hasMin = t && t.min !== null; var hasCap = t && t.cap !== null;
-    if (!hasMin && !hasCap) return "<span class='temp-current temp-only'>" + val.toFixed(1) + "C</span>";
-    var inRange = (!hasMin || val >= t.min) && (!hasCap || val <= t.cap);
-    return "<div class='temp-cell'>" + (hasMin ? "<span class='temp-bound'>" + t.min + "</span>" : "") +
-      "<span class='temp-current " + (inRange ? "temp-ok" : "temp-alert") + "'>" + val.toFixed(1) + "C</span>" +
-      (hasCap ? "<span class='temp-bound'>" + t.cap + "</span>" : "") + "</div>";
+  function renderTemp(val,diagId) {
+    if (val==null) return '<span class="temp-na">—</span>';
+    var t=_thresh[diagId], hasMin=t&&t.min!==null, hasCap=t&&t.cap!==null;
+    if (!hasMin&&!hasCap) return '<span class="temp-value temp-plain">'+val.toFixed(1)+'°C</span>';
+    var ok=(!hasMin||val>=t.min)&&(!hasCap||val<=t.cap);
+    return '<div class="temp-wrap">'+(hasMin?'<span class="temp-bound">'+t.min+'°</span>':'')+
+      '<span class="temp-value '+(ok?'temp-ok':'temp-alert')+'">'+val.toFixed(1)+'°C</span>'+
+      (hasCap?'<span class="temp-bound">'+t.cap+'°</span>':'')+'</div>';
   }
 
   function renderDoor(val) {
-    if (val === null || val === undefined) return "<span style='color:#484f58'>-</span>";
-    return val === "Open" ? "<span class='door-open'>Open</span>" : "<span class='door-closed'>Closed</span>";
+    if (val==null) return '<span class="door-na">—</span>';
+    return '<span class="door-badge '+(val==='Open'?'open':'closed')+'">'+(val==='Open'?'⚠ Open':'✓ Closed')+'</span>';
   }
 
-  function byId(arr) { return arr.reduce(function (m, o) { m[o.id] = o; return m; }, {}); }
-  function x(s) { return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-  function fmt(sec) {
-    if (!sec) return "-";
-    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    if (h > 0) return h + "h " + m + "m"; if (m > 0) return m + "m " + s + "s"; return s + "s";
+  function fmtDur(s) {
+    if (!s) return '—';
+    var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+    return h>0 ? h+'h '+m+'m' : m>0 ? m+'m '+sec+'s' : sec+'s';
   }
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   async function refresh() {
-    try { render(await fetchFleetData()); }
-    catch (e) { document.getElementById("tableWrapper").innerHTML = "<div class='state-msg state-error'>Error: " + (e.message || JSON.stringify(e)) + "</div>"; }
+    try { render(await fetchData()); }
+    catch(e) {
+      document.getElementById('tableWrap').innerHTML =
+        '<div class="state-wrap"><div class="state-card"><div class="state-icon">⚠️</div><div class="state-title">Connection error</div><div class="state-sub error">'+esc(e.message||JSON.stringify(e))+'</div></div></div>';
+    }
   }
 
   function startCountdown() {
-    clearInterval(_timer); _tick = REFRESH_INTERVAL;
-    _timer = setInterval(function () {
-      _tick--; var el = document.getElementById("countdown"); if (el) el.textContent = _tick;
-      if (_tick <= 0) { _tick = REFRESH_INTERVAL; refresh(); }
+    clearInterval(_timer); _tick = REFRESH;
+    _timer = setInterval(function(){
+      _tick--; var el=document.getElementById('countdown'); if(el) el.textContent=_tick;
+      if(_tick<=0){ _tick=REFRESH; refresh(); }
     }, 1000);
   }
 
-  geotab.addin.reeferMonitor = function (api, state) {
+  geotab.addin.reeferMonitor = function(api, state) {
     return {
-      initialize: async function (freshApi, freshState, callback) {
+      initialize: async function(freshApi, freshState, cb) {
         _api = freshApi;
         try { await discoverDiagnostics(); await loadThresholds(); await refresh(); startCountdown(); }
-        catch (e) { document.getElementById("tableWrapper").innerHTML = "<div class='state-msg state-error'>Init failed: " + (e.message || JSON.stringify(e)) + "</div>"; }
-        callback();
+        catch(e) {
+          document.getElementById('tableWrap').innerHTML =
+            '<div class="state-wrap"><div class="state-card"><div class="state-icon">⚠️</div><div class="state-title">Init failed</div><div class="state-sub error">'+esc(e.message||JSON.stringify(e))+'</div></div></div>';
+        }
+        cb();
       },
-      focus: function (freshApi) { _api = freshApi; },
-      blur:  function ()         { clearInterval(_timer); }
+      focus: function(freshApi) { _api = freshApi; },
+      blur:  function()        { clearInterval(_timer); }
     };
   };
+
 })();
 </script>
 </body>
