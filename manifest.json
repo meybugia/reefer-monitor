@@ -1,0 +1,11 @@
+[{
+  "name": "Reefer Fleet Monitor",
+  "supportEmail": "meybugia@geotab.com",
+  "version": "1.0",
+  "items": [{
+    "page": "#reeferMonitor",
+    "menuName": {"en": "Reefer Monitor"},
+    "url": "https://meybugia.github.io/reefer-monitor/index.html"
+  }],
+  "isSigned": false
+}]
